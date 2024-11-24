@@ -1,22 +1,16 @@
 from mesa import Agent
+
+from Agents.CollectingAgent import CollectingAgent
 from Resources.EnergeticCrystal import EnergeticCrystal
 from Resources.RareMetalBlock import RareMetalBlock
 from Resources.AncientStructure import AncientStructure
 from collections import deque
 
-class ObjectiveAgent(Agent):
+class ObjectiveAgent(CollectingAgent):
     def __init__(self, unique_id, model, name="ObjectiveAgent"):
         super().__init__(unique_id, model)
-        self.name = name
-        self.carrying = None
-        self.points = 0
-        self.known_resources = {}  # Dicionário de recursos conhecidos com suas posições
-        self.path = []             # Lista de posições para o caminho planejado
-        self.shape = "circle"
         self.color = "yellow"
-        self.type = "Agent"
-        self.layer = 1
-        self.known_resources = {}
+        self.name = name
 
     def step(self):
         if self.carrying is not None:

@@ -3,6 +3,7 @@ from mesa.time import RandomActivation
 from mesa.space import MultiGrid
 from mesa.datacollection import DataCollector
 
+from Agents.CollectingAgent import CollectingAgent
 from Agents.SimpleAgent import SimpleAgent
 from Agents.Base import Base
 from Agents.StateAgent import StateAgent
@@ -23,13 +24,15 @@ class ModelBase(Model):
         self.grid = MultiGrid(grid_params["width"], grid_params["height"], False)
         self.schedule = RandomActivation(self)
         self.running = True
+        self.resource_id = 1000
+        self.num_resources_total = 0
 
         # Inicializar a base
         self.base_position = (0, 0)
         self.base = Base(self.next_id(), self, self.base_position)
         self.grid.place_agent(self.base, self.base_position)
 
-        # Inicializar o BDI Agent
+        # Inicializar os agentes
         id = 0
         for i in range(self.num_agents["SimpleAgent"]):
             agent = SimpleAgent(unique_id=id + 1, model=self, name=f"SimpleAgent_{id + 1}")
@@ -49,10 +52,12 @@ class ModelBase(Model):
             self.schedule.add(agent)
             id += 1
 
+        self.utility_agents = []
         for i in range(self.num_agents["UtilityAgent"]):
             agent = UtilityAgent(unique_id=id + 1, model=self, name=f"UtilityAgent_{id + 1}")
             self.grid.place_agent(agent, (self.random.randrange(self.grid.width), self.random.randrange(self.grid.height)))
             self.schedule.add(agent)
+            self.utility_agents.append(agent)
             id += 1
 
         for i in range(self.num_agents["BDIAgent"]):
@@ -61,8 +66,8 @@ class ModelBase(Model):
             self.schedule.add(bdi_agent)
             id += 1
 
-        # Criar recursos
-        self.resource_id = 1000
+        self.available_utility_agents = self.utility_agents.copy()
+        # Inicializar os recursos
 
         resource_types = [("EnergeticCrystal", num_resources["EnergeticCrystal"]),
                           ("RareMetalBlock", num_resources["RareMetalBlock"]),

@@ -1,6 +1,5 @@
 from mesa import Agent
 
-
 from Resources.EnergeticCrystal import EnergeticCrystal
 from Resources.RareMetalBlock import RareMetalBlock
 from Resources.AncientStructure import AncientStructure

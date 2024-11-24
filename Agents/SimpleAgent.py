@@ -1,21 +1,13 @@
-from tkinter import SEL
-from mesa import Agent
+from Agents.AgenteBase import AgentBase
 from Resources.EnergeticCrystal import EnergeticCrystal
 from Resources.RareMetalBlock import RareMetalBlock
 from Resources.AncientStructure import AncientStructure
 
-class SimpleAgent(Agent):
+class SimpleAgent(AgentBase):
     def __init__(self, unique_id, model, name="SimpleAgent"):
         super().__init__(unique_id, model)
         self.name = name
-        self.carrying = None
-        self.points = 0
-        self.type = "Agent"
         self.color = "blue"
-        self.shape = "circle"
-        self.layer = 1
-        self.known_resources = {}
-        self.partner = None
 
     def step(self):
         if self.carrying is not None:
