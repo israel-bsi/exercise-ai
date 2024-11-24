@@ -43,7 +43,7 @@ class BDIAgent(Agent):
         for obj in cell_contents:
             if isinstance(obj, (EnergeticCrystal, RareMetalBlock, AncientStructure)) and not obj.carried:
                 self.known_resources[self.pos] = obj
-                print(f"{self.name} detectou {obj.type} em {self.pos}.")
+                #print(f"{self.name} detectou {obj.type} em {self.pos}.")
 
         # Receber informações dos outros agentes
         for agent in self.model.schedule.agents:

@@ -36,7 +36,7 @@ class StateAgent(Agent):
         for obj in cell_contents:
             if isinstance(obj, (EnergeticCrystal, RareMetalBlock, AncientStructure)) and not obj.carried:
                 self.known_resources[self.pos] = obj
-                print(f"{self.name} detectou {obj.type} em {self.pos}.")
+                #print(f"{self.name} detectou {obj.type} em {self.pos}.")
 
     def move_avoiding_visited(self):
         possible_steps = self.model.grid.get_neighborhood(

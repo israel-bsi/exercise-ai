@@ -49,7 +49,7 @@ class UtilityAgent(Agent):
         for obj in cell_contents:
             if isinstance(obj, (EnergeticCrystal, RareMetalBlock, AncientStructure)) and not obj.carried:
                 self.known_resources[self.pos] = obj
-                print(f"{self.name} detectou {obj.type} em {self.pos}.")
+                #print(f"{self.name} detectou {obj.type} em {self.pos}.")
 
     def find_target_resource(self):
         # Escanear recursos próximos
@@ -79,6 +79,7 @@ class UtilityAgent(Agent):
 
     def receive_help_request(self, requesting_agent, resource):
         # Calcular a utilidade de ajudar
+        print(f"{self.name} recebeu pedido de ajuda de {requesting_agent.name} para {resource.name}.")
         utility = self.calculate_utility(resource)
         self.requests[requesting_agent.unique_id] = {
             'agent': requesting_agent,
@@ -101,7 +102,7 @@ class UtilityAgent(Agent):
         # Escolher o pedido com maior utilidade
         if best_request:
             best_request = max(self.requests.values(), key=lambda x: x['utility'])
-            if best_request['utility'] > self.calculate_utility(self.target_resource) if self.target_resource else 0:
+            if best_request['utility'] > (self.calculate_utility(self.target_resource) if self.target_resource else 0):
                 # Aceitar o pedido
                 self.target_resource = best_request['resource']
                 self.path = self.plan_path(self.pos, self.target_resource.pos)
@@ -148,19 +149,25 @@ class UtilityAgent(Agent):
                     if agent != self:
                         agent.carrying = resource
                         agent.path = self.plan_path(agent.pos, self.model.base.position)
-                if len(agents_in_cell) == 2:
-                    print(f"{self.name} e outros agentes coletaram {resource.name}.")
-                else:
-                    print(f"{self.name} coletou {resource.name}.")
+                        agent.target_resource = None
+
                 self.model.grid.remove_agent(resource)
                 self.model.update_all_agents_known_resources(self.pos)
                 self.path = self.plan_path(self.pos, self.model.base.position)
                 # Limpar o recurso alvo
                 self.target_resource = None
+                if len(agents_in_cell) == 2:
+                    print(f"{self.name} e outros agentes coletaram {resource.name}.")
+                else:
+                    print(f"{self.name} coletou {resource.name}.")
 
     def deliver_resource(self):
-        self.points += self.carrying.value
-        print(f"{self.name} entregou {self.carrying.name} na base e ganhou {self.carrying.value} pontos.")
+        if self.carrying.required_agents == 2:
+            points = self.carrying.value / 2
+        else:
+            points = self.carrying.value
+        self.points += points
+        print(f"{self.name} entregou {self.carrying.name} na base e ganhou {points} pontos.")
         self.carrying = None
         self.path = []
         self.model.num_resources_delivered += 1

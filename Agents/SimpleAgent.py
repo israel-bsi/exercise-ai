@@ -1,4 +1,4 @@
-from Demos.SystemParametersInfo import new_x
+from tkinter import SEL
 from mesa import Agent
 from Resources.EnergeticCrystal import EnergeticCrystal
 from Resources.RareMetalBlock import RareMetalBlock
@@ -15,6 +15,7 @@ class SimpleAgent(Agent):
         self.shape = "circle"
         self.layer = 1
         self.known_resources = {}
+        self.partner = None
 
     def step(self):
         if self.carrying is not None:
@@ -30,10 +31,10 @@ class SimpleAgent(Agent):
         for obj in cell_contents:
             if isinstance(obj, (EnergeticCrystal, RareMetalBlock, AncientStructure)) and not obj.carried:
                 self.known_resources[self.pos] = obj
-                print(f"{self.name} detectou {obj.type} em {self.pos}.")
+                #print(f"{self.name} detectou {obj.type} em {self.pos}.")
 
     def random_move(self):
-        x, y = self.pos
+        x, y = self.pos       
 
         possible_moves = [
             (x, y - 1),  # Cima
@@ -92,20 +93,15 @@ class SimpleAgent(Agent):
                     print(f"{self.name} coletou {resource.name}.")
                     self.model.grid.remove_agent(resource)
                     break
-                elif resource.required_agents == 2:
-                    agents_in_cell = [obj for obj in cell_contents if isinstance(obj, SimpleAgent) and obj != self]
-                    if agents_in_cell:
-                        resource.carried = True
-                        self.carrying = resource
-                        other_agent = agents_in_cell[0]
-                        other_agent.carrying = resource
-                        print(f"{self.name} e {other_agent.name} coletaram {resource.name}.")
-                        self.model.grid.remove_agent(resource)
-                        break
 
     def deliver_resource(self):
         # Entrega o recurso na base
-        self.points += self.carrying.value
-        print(f"{self.name} entregou {self.carrying.type} na base e ganhou {self.carrying.value} pontos.")
+        if self.carrying.required_agents == 2:
+            points = self.carrying.value / 2
+        else:
+            points = self.carrying.value
+        self.points += points
+        print(f"{self.name} entregou {self.carrying.name} na base e ganhou {points} pontos.")
         self.carrying = None  # Libera o agente para coletar outro recurso
+        self.partner.carrying = None # Libera o parceiro para coletar outro recurso
         self.model.num_resources_delivered += 1

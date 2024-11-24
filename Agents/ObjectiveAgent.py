@@ -49,7 +49,7 @@ class ObjectiveAgent(Agent):
         for obj in cell_contents:
             if isinstance(obj, (EnergeticCrystal, RareMetalBlock, AncientStructure)) and not obj.carried:
                 self.known_resources[self.pos] = obj
-                print(f"{self.name} detectou {obj.type} em {self.pos}.")
+                #print(f"{self.name} detectou {obj.type} em {self.pos}.")
 
     def find_nearest_resource(self):
         # Encontra o recurso conhecido mais próximo

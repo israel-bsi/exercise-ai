@@ -11,10 +11,10 @@ grid = CanvasGrid(agent_portrayal, 15, 15, 600, 600)
 chart = ChartModule([{"Label": "TotalPoints", "Color": "Black"}])
 
 num_agents = {
-    "SimpleAgent": 0,
+    "SimpleAgent": 2,
     "StateAgent": 0,
     "ObjectiveAgent": 0,
-    "UtilityAgent": 3,
+    "UtilityAgent": 0,
     "BDIAgent": 0
 }
 num_resources ={
