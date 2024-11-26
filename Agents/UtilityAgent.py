@@ -1,216 +1,162 @@
 from Agents.CollectingAgent import CollectingAgent
-from Resources.EnergeticCrystal import EnergeticCrystal
-from Resources.RareMetalBlock import RareMetalBlock
-from Resources.AncientStructure import AncientStructure
 
 class UtilityAgent(CollectingAgent):
     def __init__(self, unique_id, model, name="UtilityAgent"):
         super().__init__(unique_id, model)
         self.color = "red"
         self.name = name
-        self.requests = {}  # Armazena as solicitações de ajuda
+        self.available = True  # Flag para indicar disponibilidade para ajudar
+        self.current_request = None  # Solicitação atual de ajuda
+        self.partner = None  # Referência ao agente parceiro
 
     def step(self):
         """Executa as ações do agente em cada passo da simulação."""
-        # Verificar solicitações de ajuda
-        if self.requests:
-            self.respond_to_help_requests()
+        print(
+            f"{self.name} - Posição: {self.pos}, Disponível: {self.available}, Solicitação Atual: {self.current_request}")
 
-        if self.carrying is not None:
-            # Se estiver carregando um recurso, mover-se em direção à base
-            self.move_toward(self.model.base.pos)  # Base como destino
-            if self.pos == self.model.base.pos:
-                self.deliver_resource()
-        elif self.target_resource:
-            # Se tem um recurso como alvo, mover-se em direção a ele
-            self.move_toward(self.target_resource.pos)  # Recurso como destino
-            if self.pos == self.target_resource.pos:
-                self.collect_resource()
+        if self.available and self.model.help_requests:
+            self.process_help_requests()
+
+        if self.current_request:
+            resource = self.current_request['resource']
+            if self.pos != resource.pos:
+                self.move_toward(resource.pos)
+                print(f"{self.name} está se movendo para {resource.pos} para ajudar na coleta.")
+            else:
+                self.assist_collect(resource)
+
+    def process_help_requests(self):
+        """Processa as solicitações de ajuda disponíveis e seleciona a melhor para ajudar."""
+        best_request = None
+        best_utility = -1
+
+        for request in self.model.help_requests:
+            print(f"Processando solicitação: {request}")
+            if 'requester' not in request or 'resource' not in request:
+                print(f"Solicitação malformada ignorada: {request}")
+                continue  # Ignora solicitações malformadas
+
+            resource = request['resource']
+            if resource is None:
+                print(f"Solicitação ignorada porque 'resource' é None: {request}")
+                continue  # Ignora solicitações com resource=None
+
+            distance = self.model.manhattan_distance(self.pos, resource.pos)
+            utility = self.calculate_utility(distance, len(self.model.available_utility_agents))
+
+            print(
+                f"Solicitação: requester={request['requester'].name}, resource={resource.type}, distance={distance}, utility={utility}")
+
+            if utility > best_utility:
+                best_utility = utility
+                best_request = request
+
+        if best_request:
+            self.accept_help(best_request)
         else:
-            # Procurar por recursos ou explorar
-            self.find_target_resource()
+            print(f"{self.name} não encontrou solicitações de ajuda com utilidade positiva.")
 
-        # Atualizar disponibilidade de ajuda no modelo
-        self.update_availability()
+    def calculate_utility(self, distance, available_agents):
+        """Calcula a utilidade de ajudar com base na distância e no número de agentes disponíveis."""
+        # Exemplo de cálculo: mais próximo e mais agentes disponíveis aumentam a utilidade
+        utility = (available_agents) / (distance + 1)
+        print(f"{self.name} calculou utilidade {utility} para ajudar.")
+        return utility
 
-    def move_toward(self, destination=None):
-        """Move-se em direção a um destino (recurso, base ou qualquer posição). Se não houver, move-se aleatoriamente."""
-        if destination is None:
-            self.random_move()
+    def accept_help(self, request):
+        """Aceita uma solicitação de ajuda."""
+        self.current_request = request
+        self.available = False
+        requester = request['requester']
+        resource = request['resource']
+
+        # Remover a solicitação da fila
+        self.model.remove_help_request(request)
+
+        # Remover o UtilityAgent da lista de disponíveis
+        if self in self.model.available_utility_agents:
+            self.model.available_utility_agents.remove(self)
+
+        # Planejar caminho para o recurso
+        self.path = self.plan_path(self.pos, resource.pos)
+        print(f"{self.name} aceitou ajudar {requester.name} na coleta de {resource.type} em {resource.pos}.")
+
+        # Log adicional para verificar o conteúdo de current_request
+        print(f"Current Request após aceitação: {self.current_request}")
+
+    def assist_collect(self, resource):
+        """Assiste na coleta do recurso junto com o agente solicitante."""
+        if not self.current_request:
+            print(f"{self.name} não tem uma solicitação atual para processar.")
             return
 
-        # Obter coordenadas do destino
-        dest_x, dest_y = destination
-        current_x, current_y = self.pos
+        if 'requester' not in self.current_request:
+            print(f"{self.name} recebeu uma solicitação sem 'requester': {self.current_request}")
+            self.current_request = None
+            self.available = True
+            return
 
-        # Calcular a direção para mover
+        requester = self.current_request['requester']
+        resource = self.current_request['resource']
+
+        if resource is None:
+            print(f"{self.name} está tentando coletar um recurso que é None.")
+            self.current_request = None
+            self.available = True
+            return
+
+        # Configurar estados de ambos os agentes
+        self.carrying = resource
+        requester.carrying = resource
+
+        # Definir parceiros
+        self.partner = requester
+        requester.partner = self
+
+        # Planejar caminho para a base
+        self.path = self.plan_path(self.pos, self.model.base.pos)
+        requester.path = self.plan_path(requester.pos, self.model.base.pos)
+
+        # Remover o recurso da grade para evitar múltiplas coletas
+        self.model.grid.remove_agent(resource)
+        print(f"{self.name} e {requester.name} coletaram {resource.type} e estão a caminho da base.")
+
+        # Resetar a solicitação atual
+        self.current_request = None
+
+        # Atualizar disponibilidade
+        self.available = True
+        if self not in self.model.available_utility_agents:
+            self.model.available_utility_agents.append(self)
+            print(f"{self.name} está agora disponível para ajudar.")
+
+    def move_toward(self, destination):
+        """Move-se em direção ao destino."""
+        if self.pos == destination:
+            return  # Já está no destino
+
+        # Calcula o próximo passo em direção ao destino (caminho simplificado)
+        new_position = self.get_next_position_toward(destination)
+        if new_position:
+            self.model.grid.move_agent(self, new_position)
+            print(f"{self.name} move para {new_position} em direção a {destination}.")
+
+    def get_next_position_toward(self, destination):
+        """Determina a próxima posição para mover em direção ao destino."""
+        current_x, current_y = self.pos
+        dest_x, dest_y = destination
+
         dx = dest_x - current_x
         dy = dest_y - current_y
 
-        # Determinar o próximo passo em x e y
-        move_x = current_x + (1 if dx > 0 else -1 if dx < 0 else 0)
-        move_y = current_y + (1 if dy > 0 else -1 if dy < 0 else 0)
+        step_x = current_x + (1 if dx > 0 else -1 if dx < 0 else 0)
+        step_y = current_y + (1 if dy > 0 else -1 if dy < 0 else 0)
 
         # Verificar se a nova posição é válida
-        if 0 <= move_x < self.model.grid.width and 0 <= move_y < self.model.grid.height:
-            new_position = (move_x, move_y)
+        if 0 <= step_x < self.model.grid.width and 0 <= step_y < self.model.grid.height:
+            return (step_x, step_y)
         else:
-            # Se a posição não for válida, manter posição atual
-            new_position = self.pos
-
-        self.model.grid.move_agent(self, new_position)
-        print(f"{self.name} move para {new_position} em direção ao destino {destination}.")
-
-    def find_target_resource(self):
-        """Procura por recursos não coletados próximos e solicita ajuda para os grandes."""
-        neighborhood = self.model.grid.get_neighborhood(
-            self.pos,
-            moore=True,
-            include_center=False,
-            radius=10  # Raio de visão do agente
-        )
-
-        for pos in neighborhood:
-            cell_contents = self.model.grid.get_cell_list_contents([pos])
-            for obj in cell_contents:
-                if isinstance(obj, (EnergeticCrystal, RareMetalBlock, AncientStructure)) and not obj.carried:
-                    if obj.required_agents > 1:
-                        self.target_resource = obj
-                        self.request_help(obj)
-                        print(f"{self.name} encontrou {obj.name} e solicitou ajuda.")
-                        return
-                    else:
-                        self.target_resource = obj
-                        self.move_toward(pos)
-                        print(f"{self.name} encontrou {obj.name} e está coletando sozinho.")
-                        return
-        # Se não encontrar recursos, mover-se aleatoriamente
-        self.random_move()
-
-    def request_help(self, resource):
-        """Solicita ajuda de outros UtilityAgents para coletar um recurso grande."""
-        for agent in self.model.available_utility_agents.copy():
-            if agent != self and not agent.carrying:
-                agent.receive_help_request(self, resource)
-                print(f"{self.name} solicitou ajuda de {agent.name} para coletar {resource.name}.")
-
-    def receive_help_request(self, requesting_agent, resource):
-        """Recebe e armazena uma solicitação de ajuda."""
-        if self.carrying is not None:
-            print(f"{self.name} está ocupado e não pode ajudar {requesting_agent.name} com {resource.name}.")
-            return
-
-        # Calcular a utilidade de ajudar
-        utility = self.calculate_utility(resource)
-        self.requests[requesting_agent.unique_id] = {
-            'agent': requesting_agent,
-            'resource': resource,
-            'utility': utility
-        }
-        print(f"{self.name} recebeu solicitação de ajuda de {requesting_agent.name}. Utilidade: {utility}.")
-
-    def respond_to_help_requests(self):
-        """Responde ao pedido de ajuda com maior utilidade."""
-        if not self.requests:
-            return
-
-        best_request = max(self.requests.values(), key=lambda x: x['utility'])
-        if best_request['utility'] > self.calculate_utility(self.target_resource) if self.target_resource else 0:
-            self.target_resource = best_request['resource']
-            self.move_toward(self.target_resource.pos)
-            print(f"{self.name} decidiu ajudar {best_request['agent'].name} com {self.target_resource.name}.")
-
-        # Limpar as solicitações após decidir
-        self.requests.clear()
-
-    def calculate_utility(self, resource):
-        """Calcula a utilidade de ajudar a coletar um recurso com base na distância e no número de agentes."""
-        if resource is None or resource.pos is None:
-            print(f"{self.name}: Recurso inválido ou sem posição. Utilidade definida como 0.")
-            return 0
-        # Calcular a distância até o recurso
-        distance = self.manhattan_distance(self.pos, resource.pos)
-
-        # Utilidade baseada no tipo de recurso e na distância
-        if resource.type == "EnergeticCrystal":
-            utility = 10 / (distance + 1)
-        elif resource.type == "RareMetalBlock":
-            utility = 20 / (distance + 1)
-        elif resource.type == "AncientStructure":
-            utility = 30 / (distance + 1)
-        else:
-            utility = 5 / (distance + 1)
-        return utility
-
-    def collect_resource(self):
-        """Coleta o recurso se todos os agentes necessários estiverem presentes."""
-        from Agents.SimpleAgent import SimpleAgent
-        from Agents.StateAgent import StateAgent
-        from Agents.ObjectiveAgent import ObjectiveAgent
-        from Agents.BDIAgent import BDIAgent
-        from Agents.Base import Base
-        if self.target_resource and self.pos == self.target_resource.pos:
-            resource = self.target_resource
-            # Filtra os agentes que não estão carregando nada e que não são recursos nem a base
-            cell_contents = self.model.grid.get_cell_list_contents([self.pos])
-            agent_classes = (SimpleAgent, StateAgent, ObjectiveAgent, UtilityAgent, BDIAgent)
-            resource_classes = (EnergeticCrystal, RareMetalBlock, AncientStructure)
-            agents_in_cell = [obj for obj in cell_contents if isinstance(obj, agent_classes)
-                              and obj.carrying is None and not isinstance(obj, resource_classes + (Base,))]
-
-            if len(agents_in_cell) >= resource.required_agents:
-                # Todos os agentes necessários estão presentes
-                resource.carried = True
-                self.carrying = resource
-                for agent in agents_in_cell:
-                    if agent != self:
-                        agent.carrying = resource
-                        agent.path = self.plan_path(agent.pos, self.model.base.position)
-                        agent.target_resource = None
-
-                self.model.grid.remove_agent(resource)
-                self.model.update_all_agents_known_resources(self.pos)
-                self.path = self.plan_path(self.pos, self.model.base.position)
-                # Limpar o recurso alvo
-                self.target_resource = None
-                if len(agents_in_cell) == 2:
-                    print(f"{self.name} e outros agentes coletaram {resource.name}.")
-                else:
-                    print(f"{self.name} coletou {resource.name}.")
-
-    def deliver_resource(self):
-        """Entrega o recurso na base e ganha pontos."""
-        if self.carrying.required_agents == 2:
-            points = self.carrying.value / 2
-        else:
-            points = self.carrying.value
-        self.points += points
-        print(f"{self.name} entregou {self.carrying.name} na base e ganhou {points} pontos.")
-        self.carrying = None
-        self.path = []
-        self.model.num_resources_delivered += 1
-        self.update_availability()
-
-    def update_availability(self):
-        """Atualiza se o agente está disponível ou não para ajudar."""
-        if self.carrying is None and self.target_resource is None:
-            if self not in self.model.available_utility_agents:
-                self.model.available_utility_agents.append(self)
-                print(f"{self.name} agora está disponível para ajudar.")
-        else:
-            if self in self.model.available_utility_agents:
-                self.model.available_utility_agents.remove(self)
-                print(f"{self.name} está ocupado e não está mais disponível para ajudar.")
-
-    def random_move(self):
-        """Move-se aleatoriamente para uma célula válida."""
-        possible_steps = self.model.grid.get_neighborhood(self.pos, moore=False, include_center=False)
-        valid_steps = [pos for pos in possible_steps if
-                       0 <= pos[0] < self.model.grid.width and 0 <= pos[1] < self.model.grid.height]
-        if valid_steps:
-            new_position = self.random.choice(valid_steps)
-            self.model.grid.move_agent(self, new_position)
-            print(f"{self.name} move para {new_position} aleatoriamente.")
+            return None
 
     def manhattan_distance(self, pos1, pos2):
         """Calcula a distância de Manhattan entre duas posições."""

@@ -19,14 +19,6 @@ class CollectingAgent(AgentBase):
         self.known_agents = {}
         self.visited_positions = set()
 
-    def request_help(self, resource):
-        """Solicita ajuda de UtilityAgents para coletar um recurso grande."""
-        # Itera sobre os UtilityAgents disponíveis
-        for agent in self.model.available_utility_agents.copy():  # Usar copy para evitar erros durante iteração
-            if agent != self and not agent.carrying:
-                agent.receive_help_request(self, resource)
-                print(f"{self.name} solicitou ajuda de {agent.name} para coletar {resource.type} em {resource.pos}.")
-
     def plan_path(self, start_pos, goal_pos):
         """Planeja um caminho do ponto de partida até o ponto de destino usando BFS."""
         grid_width = self.model.grid.width
@@ -54,3 +46,70 @@ class CollectingAgent(AgentBase):
                     came_from[neighbor] = current
                     queue.append(neighbor)
         return []  # Se não encontrar um caminho
+
+    def random_move(self):
+        """Move-se para uma célula aleatória não visitada. Se não houver, move-se para qualquer célula adjacente válida."""
+        possible_steps = self.model.grid.get_neighborhood(
+            self.pos,
+            moore=False,  # Sem movimento diagonal
+            include_center=False
+        )
+
+        # Filtrar células adjacentes não visitadas
+        unvisited_steps = [
+            pos for pos in possible_steps
+            if pos not in self.visited_positions and
+               0 <= pos[0] < self.model.grid.width and
+               0 <= pos[1] < self.model.grid.height
+        ]
+
+        if unvisited_steps:
+            # Se houver células não visitadas, mover-se para uma delas
+            new_position = self.random.choice(unvisited_steps)
+            self.model.grid.move_agent(self, new_position)
+            #print(f"{self.name} move para {new_position} aleatoriamente (não visitada).")
+        else:
+            # Se não houver células não visitadas, permitir mover-se para qualquer célula adjacente válida
+            valid_steps = [
+                pos for pos in possible_steps
+                if 0 <= pos[0] < self.model.grid.width and
+                   0 <= pos[1] < self.model.grid.height
+            ]
+
+            if valid_steps:
+                new_position = self.random.choice(valid_steps)
+                self.model.grid.move_agent(self, new_position)
+                #print(f"{self.name} move para {new_position} aleatoriamente (já visitada).")
+            else:
+                # Se não houver células adjacentes válidas (muito raro em grades conectadas), o agente fica parado
+                print(f"{self.name} não encontrou passos válidos para mover.")
+
+    def move_toward(self, destination=None):
+        """Move-se em direção a um destino (recurso, base ou qualquer posição). Se não houver, move-se aleatoriamente."""
+        # Se não houver destino, mover aleatoriamente
+        if destination is None:
+            self.random_move()
+            return
+
+        # Obter coordenadas do destino
+        dest_x, dest_y = destination
+        current_x, current_y = self.pos
+
+        # Calcular a direção para mover
+        dx = dest_x - current_x
+        dy = dest_y - current_y
+
+        # Determinar o próximo passo em x
+        move_x = current_x + (1 if dx > 0 else -1 if dx < 0 else 0)
+        # Determinar o próximo passo em y
+        move_y = current_y + (1 if dy > 0 else -1 if dy < 0 else 0)
+
+        # Verificar se a nova posição é válida
+        if 0 <= move_x < self.model.grid.width and 0 <= move_y < self.model.grid.height:
+            new_position = (move_x, move_y)
+        else:
+            # Se a posição não for válida, manter posição atual
+            new_position = self.pos
+
+        self.model.grid.move_agent(self, new_position)
+        # print(f"{self.name} move para {new_position} em direção ao destino {destination}.")

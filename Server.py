@@ -12,8 +12,8 @@ chart = ChartModule([{"Label": "TotalPoints", "Color": "Black"}])
 
 num_agents = {
     "SimpleAgent": 0,
-    "StateAgent": 2,
-    "ObjectiveAgent": 0,
+    "StateAgent": 0,
+    "ObjectiveAgent": 2,
     "UtilityAgent": 1,
     "BDIAgent": 0
 }
