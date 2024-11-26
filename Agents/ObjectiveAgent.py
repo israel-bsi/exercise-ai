@@ -11,7 +11,7 @@ class ObjectiveAgent(CollectingAgent):
 
     def step(self):
         """Executa as ações do agente em cada passo da simulação."""
-        print(f"{self.name} - Posição: {self.pos}, Carregando: {self.carrying}, Parceiro: {self.partner}")
+        #print(f"{self.name} - Posição: {self.pos}, Carregando: {self.carrying}, Parceiro: {self.partner}")
 
         if self.carrying:
             # Se estiver carregando um recurso, mover-se em direção à base
@@ -57,11 +57,7 @@ class ObjectiveAgent(CollectingAgent):
             return
 
         if self.model.available_utility_agents:
-            utility_agent = self.model.available_utility_agents[0]  # Seleciona o primeiro agente disponível
             self.model.add_help_request(self, resource)
-            print(f"{self.name} solicitou ajuda para coletar {resource.type} em {resource.pos}.")
-        else:
-            print(f"{self.name} tentou solicitar ajuda, mas não há UtilityAgents disponíveis.")
 
     def move_toward(self, destination):
         """Move-se em direção ao destino."""
@@ -72,7 +68,7 @@ class ObjectiveAgent(CollectingAgent):
         new_position = self.get_next_position_toward(destination)
         if new_position:
             self.model.grid.move_agent(self, new_position)
-            print(f"{self.name} move para {new_position} em direção a {destination}.")
+           #print(f"{self.name} move para {new_position} em direção a {destination}.")
 
     def get_next_position_toward(self, destination):
         """Determina a próxima posição para mover em direção ao destino."""
@@ -94,17 +90,17 @@ class ObjectiveAgent(CollectingAgent):
     def deliver_resource(self):
         """Entrega o recurso na base e atualiza os pontos."""
         if self.carrying is None:
-            print(f"{self.name} não está carregando nenhum recurso para entregar.")
+            #print(f"{self.name} não está carregando nenhum recurso para entregar.")
             return
 
         # Calcular pontos com base no tipo de recurso
         if isinstance(self.carrying, AncientStructure):
-            points = 20  # Exemplo de valor
+            points = self.carrying.value / 2
         else:
-            points = 10  # Valor padrão
+            points = self.carrying.value
 
         self.points += points
-        print(f"{self.name} entregou {self.carrying.type} na base e ganhou {points} pontos.")
+        print(f"{self.name} entregou {self.carrying.name} na base e ganhou {points} pontos.")
 
         # Resetar estado
         self.carrying = None

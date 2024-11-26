@@ -150,10 +150,12 @@ class ModelBase(Model):
 
         request = {
             'requester': requester,
-            'resource': resource
+            'resource': resource,
+            'assigned_agents': 0,
+            'max_agents': 2
         }
         self.help_requests.append(request)
-        print(f"Solicitação de ajuda adicionada para {resource.type} em {resource.pos} por {requester.name}.")
+        print(f"Solicitação de ajuda adicionada para {resource.name} em {resource.pos} por {requester.name}.")
 
     def get_best_help_request(self):
         """Retorna a solicitação de ajuda com a maior utilidade."""
@@ -171,8 +173,10 @@ class ModelBase(Model):
         """Remove uma solicitação de ajuda da fila."""
         if request in self.help_requests:
             self.help_requests.remove(request)
-            print(f"Solicitação de ajuda removida para {request['resource'].type} em {request['resource'].pos}.")
+            print(f"Solicitação de ajuda removida para {request['resource'].name} em {request['resource'].pos}.")
 
     def manhattan_distance(self, pos1, pos2):
         """Calcula a distância de Manhattan entre duas posições."""
+        if pos1 is None or pos2 is None:
+            return
         return abs(pos1[0] - pos2[0]) + abs(pos1[1] - pos2[1])
