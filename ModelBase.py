@@ -3,17 +3,8 @@ from mesa.time import RandomActivation
 from mesa.space import MultiGrid
 from mesa.datacollection import DataCollector
 
-from Agents.CollectingAgent import CollectingAgent
-from Agents.SimpleAgent import SimpleAgent
-from Agents.Base import Base
-from Agents.StateAgent import StateAgent
-from Agents.UtilityAgent import UtilityAgent
-from Agents.ObjectiveAgent import ObjectiveAgent
-from Agents.BDIAgent import BDIAgent
-
-from Resources.EnergeticCrystal import EnergeticCrystal
-from Resources.RareMetalBlock import RareMetalBlock
-from Resources.AncientStructure import AncientStructure
+from Agents import *
+from Resources import *
 
 class ModelBase(Model):
     def __init__(self, num_agents, num_resources, grid_params):
@@ -28,6 +19,7 @@ class ModelBase(Model):
         self.num_resources_total = 0
         self.available_utility_agents = []
         self.help_requests = []
+        self.bdi_agents = []
 
         # Inicializar a base
         self.base_position = (0, 0)
@@ -66,28 +58,31 @@ class ModelBase(Model):
             self.grid.place_agent(bdi_agent, self.find_random_empty_cell())
             self.schedule.add(bdi_agent)
             id += 1
+            self.bdi_agents.append(bdi_agent)
 
+        self.num_resources_delivered = 0
         # Inicializar os recursos
         resource_types = [("EnergeticCrystal", num_resources["EnergeticCrystal"]),
                           ("RareMetalBlock", num_resources["RareMetalBlock"]),
                           ("AncientStructure", num_resources["AncientStructure"])]
 
-        self.num_resources_total = num_resources["EnergeticCrystal"] + num_resources["RareMetalBlock"] + num_resources["AncientStructure"]
-        self.num_resources_delivered = 0
-
         for resource_type, quantity in resource_types:
             for _ in range(quantity):
                 if resource_type == "EnergeticCrystal":
                     resource = EnergeticCrystal(self.resource_id, self)
+                    self.num_resources_total += 1
                 elif resource_type == "RareMetalBlock":
                     resource = RareMetalBlock(self.resource_id, self)
+                    self.num_resources_total += 1
                 elif resource_type == "AncientStructure":
                     resource = AncientStructure(self.resource_id, self)
+                    self.num_resources_total += 2
                 self.resource_id += 1
                 x = self.random.randrange(self.grid.width)
                 y = self.random.randrange(self.grid.height)
                 self.grid.place_agent(resource, (x, y))
-                self.num_resources_total += 1
+
+        print(f"Modelo inicializado com {self.num_agents} agentes e {self.num_resources_total} recursos.")
 
         self.datacollector = DataCollector(
             model_reporters={"TotalPoints": self.compute_total_points}
@@ -106,7 +101,10 @@ class ModelBase(Model):
         self.schedule.step()
         self.datacollector.collect(self)
 
-        if self.num_resources_delivered == self.num_resources_total:
+        #print(f"Foram entregues {self.num_resources_delivered}")
+        #print(f"Deveriam ser entregues {self.num_resources_total}")
+
+        if self.num_resources_delivered >= self.num_resources_total:
             self.running = False  # Para a simulação
 
             # Imprimir os pontos de cada agente
