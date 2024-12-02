@@ -1,5 +1,4 @@
 from .AgentBase import AgentBase
-from .CollectingAgent import CollectingAgent
 from .SimpleAgent import SimpleAgent
 from .StateAgent import StateAgent
 from .ObjectiveAgent import ObjectiveAgent
