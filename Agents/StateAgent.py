@@ -18,14 +18,6 @@ class StateAgent(AgentBase):
             if self.pos == self.model.base.pos:
                 self.deliver_resource()
             return
-        if self.known_resources and not self.carrying:
-            #print(f"{self.name} conhece {len(self.known_resources)} recursos.")
-            #print(f"{self.name} está se movendo em direção ao recurso {self.known_resources[0].name}.")
-            #print(f"{self.name} está na posição {self.pos}.")
-            self.move_towards(self.known_resources[0].pos)
-            if self.pos == self.known_resources[0].pos:
-                self.collect_any_resource()
-            return
 
         self.random_move_to_unvisited_position()
         self.collect_any_resource()

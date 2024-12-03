@@ -109,7 +109,6 @@ class AgentBase(Agent):
 
         for resource in resources:
             if len(agents) >= resource.required_agents:
-                self.known_resources.remove(resource)
                 self.carrying = resource
                 resource.carried = True
                 self.model.grid.remove_agent(resource)
